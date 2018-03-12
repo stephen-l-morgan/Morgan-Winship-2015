@@ -15,6 +15,8 @@ log using matching-demo-4.log, replace
 
 use mw_cath9.dta
 
+*** Datasets available here:  http://www.cambridge.org/download_file/857876
+
 *** alternative data set 
 *use mw_cath1.dta
 
