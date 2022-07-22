@@ -1,0 +1,2229 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/matching-demo-4.log
+  log type:  text
+ opened on:  22 Jul 2022, 11:31:36
+
+. 
+. *******************************************************************************
+. *** load the simulated data set utilized for Table 5.6
+. *******************************************************************************
+. 
+. *** 10 simulated Stata datasets are in the repository.  The 9th dataset is the
+. ***    the one that genereates the results for Table 5.6.  Other datasets 
+. ***    can be used to evaluate the variability repoted in Table 5.7.
+. 
+.         /* 
+>         
+>         Datasets can also be downloaded at the publisher website:
+> 
+>                 http://www.cambridge.org/download_file/857876 
+>         
+>         */
+. 
+. use mw_cath9.dta
+(Written by R.              )
+
+. 
+. *******************************************************************************
+. *** summary statistics for simulated data
+. *******************************************************************************
+. 
+. summ
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+           y |     10,000    100.7321    13.66611   38.69548    152.647
+       treat |     10,000       .1052    .3068263          0          1
+       asian |     10,000       .0866    .2812621          0          1
+    hispanic |     10,000       .1403    .3473154          0          1
+       black |     10,000       .0999    .2998816          0          1
+-------------+---------------------------------------------------------
+     natamer |     10,000       .0076    .0868504          0          1
+       urban |     10,000       .3795    .4852868          0          1
+       neast |     10,000       .2066    .4048862          0          1
+    ncentral |     10,000       .2585    .4378321          0          1
+       south |     10,000       .3017    .4590187          0          1
+-------------+---------------------------------------------------------
+        sibs |     10,000       2.442    1.826135          0         11
+     bedroom |     10,000       .8236    .3811792          0          1
+   twoparent |     10,000       .7951    .4036487          0          1
+         ses |     10,000   -.0012317    .9955618  -3.679142   4.230401
+        test |     10,000   -.0059906    1.006046  -4.663873   3.976181
+-------------+---------------------------------------------------------
+       sessq |     10,000    .9910457    1.424526   1.23e-09   17.89629
+      testsq |     10,000    1.012063    1.385562   2.16e-09   21.75172
+     sestest |     10,000    .4493531    1.085139  -3.198399    10.7088
+    twoblack |     10,000       .0778      .26787          0          1
+  neastblack |     10,000       .0185    .1347574          0          1
+-------------+---------------------------------------------------------
+ncentralbl~k |     10,000        .018    .1329578          0          1
+  southblack |     10,000       .0547    .2274051          0          1
+     twohisp |     10,000       .1003    .3004146          0          1
+   neasthisp |     10,000       .0161    .1258665          0          1
+ncentralhisp |     10,000        .011    .1043077          0          1
+-------------+---------------------------------------------------------
+   southhisp |     10,000       .0527    .2234451          0          1
+          yt |     10,000    106.0024    13.70228     45.962   162.3036
+          yc |     10,000    100.0043    13.39273   38.69548    152.647
+      dshock |     10,000    5.39e-17    2.053701  -8.859437   7.391001
+           d |     10,000    5.998121    2.110594   -2.77761   13.59321
+
+. 
+. /*
+> dotplot u v ytminus1 d y
+> 
+> kdensity y, nograph generate(x fx)
+> kdensity y if d==0, nograph generate(fx0) at(x)
+> kdensity y if d==1, nograph generate(fx1) at(x)
+> label var fx0 "Control"
+> label var fx1 "Treatment"
+> line fx0 fx1 x, sort ytitle(Density)
+> */
+. 
+. mean y yt yc dshock d test ses twoparent, over(treat)
+
+Mean estimation                              Number of obs = 10,000
+
+-------------------------------------------------------------------
+                  |       Mean   Std. err.     [95% conf. interval]
+------------------+------------------------------------------------
+        c.y@treat |
+               0  |      99.82       0.14         99.54      100.10
+               1  |     108.52       0.40        107.74      109.30
+                  |
+       c.yt@treat |
+               0  |     105.71       0.15        105.42      105.99
+               1  |     108.52       0.40        107.74      109.30
+                  |
+       c.yc@treat |
+               0  |      99.82       0.14         99.54      100.10
+               1  |     101.60       0.39        100.84      102.37
+                  |
+   c.dshock@treat |
+               0  |      -0.11       0.02         -0.15       -0.06
+               1  |       0.90       0.06          0.78        1.02
+                  |
+        c.d@treat |
+               0  |       5.89       0.02          5.85        5.93
+               1  |       6.92       0.06          6.79        7.04
+                  |
+     c.test@treat |
+               0  |      -0.04       0.01         -0.06       -0.02
+               1  |       0.30       0.03          0.25        0.36
+                  |
+      c.ses@treat |
+               0  |      -0.04       0.01         -0.06       -0.02
+               1  |       0.36       0.03          0.30        0.41
+                  |
+c.twoparent@treat |
+               0  |       0.79       0.00          0.78        0.80
+               1  |       0.85       0.01          0.83        0.88
+-------------------------------------------------------------------
+
+. 
+. *******************************************************************************
+. *** set up macros for specifications
+. *******************************************************************************
+. 
+. global outcome "y"
+
+. global treatment "treat"
+
+. 
+. global shortreg "asian-ses"
+
+. global correctreg "asian-ses test"
+
+. 
+. global short " asian-ses sessq"
+
+. global correct "asian-southhisp"
+
+. 
+. global bdcolliderdescendant " "
+
+. global bdcolliders " "
+
+. 
+. global long " "
+
+. global all " "
+
+. 
+. global mediator " "
+
+. 
+. 
+. *******************************************************************************
+. *** regresssion estimators
+. *******************************************************************************
+. 
+. regress $outcome $treatment
+
+      Source |       SS           df       MS      Number of obs   =    10,000
+-------------+----------------------------------   F(1, 9998)      =    397.11
+       Model |   71338.991         1   71338.991   Prob > F        =    0.0000
+    Residual |  1796099.67     9,998  179.645896   R-squared       =    0.0382
+-------------+----------------------------------   Adj R-squared   =    0.0381
+       Total |  1867438.66     9,999  186.762543   Root MSE        =    13.403
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+       treat |       8.71       0.44    19.93    0.00         7.85        9.56
+       _cons |      99.82       0.14   704.46    0.00        99.54      100.09
+------------------------------------------------------------------------------
+
+. regress $outcome $treatment $shortreg
+
+      Source |       SS           df       MS      Number of obs   =    10,000
+-------------+----------------------------------   F(13, 9986)     =    148.15
+       Model |  301934.849        13  23225.7576   Prob > F        =    0.0000
+    Residual |  1565503.81     9,986  156.769859   R-squared       =    0.1617
+-------------+----------------------------------   Adj R-squared   =    0.1606
+       Total |  1867438.66     9,999  186.762543   Root MSE        =    12.521
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+       treat |       7.50       0.44    16.98    0.00         6.64        8.37
+       asian |       1.52       0.46     3.26    0.00         0.61        2.43
+    hispanic |      -3.06       0.41    -7.52    0.00        -3.86       -2.26
+       black |      -4.07       0.45    -9.12    0.00        -4.95       -3.20
+     natamer |      -4.99       1.45    -3.44    0.00        -7.83       -2.15
+       urban |      -1.23       0.28    -4.35    0.00        -1.79       -0.68
+       neast |       0.64       0.39     1.62    0.11        -0.14        1.41
+    ncentral |       0.43       0.38     1.14    0.25        -0.31        1.17
+       south |      -0.53       0.36    -1.48    0.14        -1.23        0.17
+        sibs |      -0.01       0.07    -0.13    0.90        -0.15        0.13
+     bedroom |       0.67       0.33     2.01    0.04         0.02        1.33
+   twoparent |       1.23       0.32     3.87    0.00         0.60        1.85
+         ses |       3.66       0.14    26.03    0.00         3.39        3.94
+       _cons |      99.57       0.51   194.60    0.00        98.57      100.57
+------------------------------------------------------------------------------
+
+. regress $outcome $treatment $correctreg
+
+      Source |       SS           df       MS      Number of obs   =    10,000
+-------------+----------------------------------   F(14, 9985)     =    226.44
+       Model |  450014.689        14  32143.9063   Prob > F        =    0.0000
+    Residual |  1417423.98     9,985  141.955331   R-squared       =    0.2410
+-------------+----------------------------------   Adj R-squared   =    0.2399
+       Total |  1867438.66     9,999  186.762543   Root MSE        =    11.915
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+       treat |       6.66       0.42    15.82    0.00         5.84        7.49
+       asian |       1.62       0.44     3.67    0.00         0.76        2.49
+    hispanic |      -3.00       0.39    -7.74    0.00        -3.76       -2.24
+       black |      -4.13       0.42    -9.72    0.00        -4.96       -3.29
+     natamer |      -4.97       1.38    -3.61    0.00        -7.68       -2.27
+       urban |      -1.07       0.27    -3.98    0.00        -1.60       -0.55
+       neast |       0.83       0.38     2.21    0.03         0.09        1.56
+    ncentral |       0.75       0.36     2.09    0.04         0.05        1.45
+       south |      -0.33       0.34    -0.96    0.34        -0.99        0.34
+        sibs |      -0.01       0.07    -0.19    0.85        -0.14        0.12
+     bedroom |       0.68       0.32     2.14    0.03         0.06        1.30
+   twoparent |       1.40       0.30     4.65    0.00         0.81        1.99
+         ses |       1.74       0.15    11.86    0.00         1.45        2.02
+        test |       4.29       0.13    32.30    0.00         4.03        4.55
+       _cons |      99.28       0.49   203.89    0.00        98.33      100.24
+------------------------------------------------------------------------------
+
+. regress $outcome $treatment $short
+
+      Source |       SS           df       MS      Number of obs   =    10,000
+-------------+----------------------------------   F(14, 9985)     =    137.57
+       Model |  301952.651        14  21568.0465   Prob > F        =    0.0000
+    Residual |  1565486.01     9,985  156.783777   R-squared       =    0.1617
+-------------+----------------------------------   Adj R-squared   =    0.1605
+       Total |  1867438.66     9,999  186.762543   Root MSE        =    12.521
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+       treat |       7.50       0.44    16.98    0.00         6.63        8.37
+       asian |       1.53       0.47     3.28    0.00         0.61        2.44
+    hispanic |      -3.05       0.41    -7.44    0.00        -3.85       -2.24
+       black |      -4.07       0.45    -9.10    0.00        -4.94       -3.19
+     natamer |      -4.99       1.45    -3.45    0.00        -7.83       -2.15
+       urban |      -1.23       0.28    -4.34    0.00        -1.79       -0.68
+       neast |       0.64       0.39     1.62    0.10        -0.13        1.41
+    ncentral |       0.43       0.38     1.15    0.25        -0.31        1.17
+       south |      -0.53       0.36    -1.48    0.14        -1.23        0.17
+        sibs |      -0.01       0.07    -0.12    0.90        -0.15        0.13
+     bedroom |       0.67       0.33     1.99    0.05         0.01        1.32
+   twoparent |       1.22       0.32     3.86    0.00         0.60        1.85
+         ses |       3.66       0.14    26.02    0.00         3.39        3.94
+       sessq |      -0.03       0.09    -0.34    0.74        -0.20        0.14
+       _cons |      99.60       0.52   192.07    0.00        98.58      100.61
+------------------------------------------------------------------------------
+
+. regress $outcome $treatment $correct
+
+      Source |       SS           df       MS      Number of obs   =    10,000
+-------------+----------------------------------   F(25, 9974)     =    126.82
+       Model |  450436.337        25  18017.4535   Prob > F        =    0.0000
+    Residual |  1417002.33     9,974  142.069614   R-squared       =    0.2412
+-------------+----------------------------------   Adj R-squared   =    0.2393
+       Total |  1867438.66     9,999  186.762543   Root MSE        =    11.919
+
+-------------------------------------------------------------------------------
+            y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        treat |       6.67       0.42    15.74    0.00         5.84        7.50
+        asian |       1.65       0.45     3.71    0.00         0.78        2.53
+     hispanic |      -3.01       0.84    -3.59    0.00        -4.65       -1.37
+        black |      -2.88       1.50    -1.92    0.06        -5.83        0.06
+      natamer |      -4.98       1.38    -3.61    0.00        -7.68       -2.28
+        urban |      -1.07       0.27    -3.95    0.00        -1.60       -0.54
+        neast |       0.90       0.42     2.13    0.03         0.07        1.73
+     ncentral |       0.75       0.40     1.89    0.06        -0.03        1.54
+        south |      -0.27       0.41    -0.67    0.51        -1.07        0.53
+         sibs |      -0.01       0.07    -0.17    0.87        -0.14        0.12
+      bedroom |       0.67       0.32     2.09    0.04         0.04        1.29
+    twoparent |       1.43       0.36     4.03    0.00         0.74        2.13
+          ses |       1.74       0.15    11.83    0.00         1.45        2.03
+         test |       4.29       0.13    32.23    0.00         4.03        4.55
+        sessq |      -0.10       0.11    -0.93    0.35        -0.31        0.11
+       testsq |      -0.06       0.11    -0.61    0.54        -0.27        0.14
+      sestest |       0.11       0.16     0.69    0.49        -0.21        0.44
+     twoblack |      -0.33       0.98    -0.34    0.74        -2.24        1.58
+   neastblack |      -1.12       1.61    -0.70    0.49        -4.28        2.03
+ncentralblack |      -1.24       1.61    -0.77    0.44        -4.39        1.92
+   southblack |      -1.01       1.44    -0.70    0.48        -3.83        1.81
+      twohisp |      -0.00       0.79    -0.00    1.00        -1.55        1.55
+    neasthisp |      -0.29       1.14    -0.25    0.80        -2.52        1.94
+ ncentralhisp |       1.20       1.30     0.92    0.36        -1.34        3.75
+    southhisp |      -0.04       0.82    -0.05    0.96        -1.65        1.57
+        _cons |      99.34       0.54   182.73    0.00        98.27      100.40
+-------------------------------------------------------------------------------
+
+. 
+. *******************************************************************************
+. *** call estimators from other matching routines
+. *******************************************************************************
+. 
+. do teffects_estimators_02.do
+
+. ******************************************************************************
+. *** matching and iptw estimators (Stata's routines)
+. *******************************************************************************
+. 
+. 
+. /* estimate logit for pscore to determine caliper size */
+. 
+. *** logit for pscore
+. logit $treatment $correct
+
+Iteration 0:   log likelihood = -3363.6057  
+Iteration 1:   log likelihood = -2712.6407  
+Iteration 2:   log likelihood = -2511.6891  
+Iteration 3:   log likelihood = -2503.3473  
+Iteration 4:   log likelihood = -2503.3258  
+Iteration 5:   log likelihood = -2503.3258  
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+
+. predict estpscore
+(option pr assumed; Pr(treat))
+
+. sum estpscore
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   estpscore |     10,000       .1052    .1424207   .0000159   .7432245
+
+. scalar sdpsc=r(sd)
+
+. display sdpsc
+.14242069
+
+. scalar setcal=.05*sdpsc
+
+. display setcal
+.00712103
+
+. drop estpscore
+
+. 
+. teffects psmatch ($outcome) ($treatment $short), ///
+>  nneighbor(1) atet
+
+Treatment-effects estimation                   Number of obs      =     10,000
+Estimator      : propensity-score matching     Matches: requested =          1
+Outcome model  : matching                                     min =          1
+Treatment model: logit                                        max =          1
+------------------------------------------------------------------------------
+             |              AI robust
+           y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+ATET         |
+       treat |
+   (1 vs 0)  |       7.77       0.68    11.42    0.00         6.44        9.11
+------------------------------------------------------------------------------
+
+. tebalance summarize
+(refitting the model using the generate() option)
+
+Covariate balance summary
+
+                         Raw      Matched
+-----------------------------------------
+Number of obs =       10,000        2,104
+Treated obs   =        1,052        1,052
+Control obs   =        8,948        1,052
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw     Matched           Raw    Matched
+----------------+------------------------------------------------
+          asian |  -.1447262   -.0287947      .6126742   .8951803
+       hispanic |  -.1177467    -.006161      .7645979   .9843931
+          black |   .0172169    .0382061      1.047239    1.10833
+        natamer |  -.0125168   -.0502343      .8645421   .5861378
+          urban |   1.097522   -.0120725      .7082836   1.019117
+          neast |    .308096    .0264836      1.414497   1.020679
+       ncentral |   .2083451    .0180666      1.207835   1.012382
+          south |  -.1810693   -.0357212       .828564   .9568859
+           sibs |  -.1095456   -.0184064      .9938813   1.028533
+        bedroom |   .1301627    .0301907      .7823414   .9389693
+      twoparent |   .1740916    .0160414      .7448785   .9687295
+            ses |   .4156424   -.0445294      .8620954    .995107
+          sessq |  -.0087175   -.0241608      1.025914   .9549648
+-----------------------------------------------------------------
+
+. 
+. tebalance density ses
+(refitting the model using the generate() option)
+
+. graph export graph/tmp1.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp1.pdf saved as PDF format
+
+. 
+. tebalance box ses
+(refitting the model using the generate() option)
+
+. graph export graph/tmp2.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp2.pdf saved as PDF format
+
+. 
+. tebalance density test
+(refitting the model using the generate() option)
+
+. graph export graph/tmp3.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp3.pdf saved as PDF format
+
+. 
+. tebalance box test
+(refitting the model using the generate() option)
+
+. graph export graph/tmp4.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp4.pdf saved as PDF format
+
+. 
+. teffects psmatch ($outcome) ($treatment $short), ///
+>  nn(5) cal(`=.05*r(sd)') atet 
+
+Treatment-effects estimation                   Number of obs      =     10,000
+Estimator      : propensity-score matching     Matches: requested =          5
+Outcome model  : matching                                     min =          5
+Treatment model: logit                                        max =          5
+------------------------------------------------------------------------------
+             |              AI robust
+           y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+ATET         |
+       treat |
+   (1 vs 0)  |       7.51       0.53    14.16    0.00         6.47        8.55
+------------------------------------------------------------------------------
+
+. tebalance summarize
+(refitting the model using the generate() option)
+
+Covariate balance summary
+
+                         Raw      Matched
+-----------------------------------------
+Number of obs =       10,000        2,104
+Treated obs   =        1,052        1,052
+Control obs   =        8,948        1,052
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw     Matched           Raw    Matched
+----------------+------------------------------------------------
+          asian |  -.1447262    -.007561      .6126742   .9706123
+       hispanic |  -.1177467   -.0195482      .7645979   .9519601
+          black |   .0172169    .0239705      1.047239   1.065621
+        natamer |  -.0125168   -.0218753      .8645421   .7792692
+          urban |   1.097522    -.004333      .7082836   1.006765
+          neast |    .308096   -.0060738      1.414497   .9955419
+       ncentral |   .2083451    .0212904      1.207835   1.014686
+          south |  -.1810693   -.0027067       .828564   .9965421
+           sibs |  -.1095456   -.0091837      .9938813   .9966691
+        bedroom |   .1301627    .0011149      .7823414   .9976092
+      twoparent |   .1740916   -.0021584      .7448785   1.004362
+            ses |   .4156424    -.009715      .8620954   .9982743
+          sessq |  -.0087175   -.0053461      1.025914   .8851423
+-----------------------------------------------------------------
+
+. 
+. teffects psmatch ($outcome) ($treatment $correct), ///
+>  nneighbor(1) atet
+
+Treatment-effects estimation                   Number of obs      =     10,000
+Estimator      : propensity-score matching     Matches: requested =          1
+Outcome model  : matching                                     min =          1
+Treatment model: logit                                        max =          1
+------------------------------------------------------------------------------
+             |              AI robust
+           y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+ATET         |
+       treat |
+   (1 vs 0)  |       7.17       0.64    11.24    0.00         5.92        8.42
+------------------------------------------------------------------------------
+
+. tebalance summarize
+(refitting the model using the generate() option)
+
+Covariate balance summary
+
+                         Raw      Matched
+-----------------------------------------
+Number of obs =       10,000        2,104
+Treated obs   =        1,052        1,052
+Control obs   =        8,948        1,052
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw     Matched           Raw    Matched
+----------------+------------------------------------------------
+          asian |  -.1447262   -.0166518      .6126742   .9370968
+       hispanic |  -.1177467    .0445768      .7645979   1.127554
+          black |   .0172169    .0716359      1.047239   1.221473
+        natamer |  -.0125168   -.0412746      .8645421   .6388088
+          urban |   1.097522           0      .7082836          1
+          neast |    .308096   -.0522258      1.414497   .9649244
+       ncentral |   .2083451     .014042      1.207835   1.009547
+          south |  -.1810693    .0388751       .828564   1.053446
+           sibs |  -.1095456   -.0123862      .9938813   .9542836
+        bedroom |   .1301627   -.0369953      .7823414   1.086064
+      twoparent |   .1740916    .0292194      .7448785   .9444834
+            ses |   .4156424     .054893      .8620954   .9979806
+           test |   .3679418    .0572344       .715418    1.04991
+          sessq |  -.0087175    .0228523      1.025914   1.151463
+         testsq |   -.155125    .0538604      .7545605   1.253205
+        sestest |  -.0610559    .0439501       .844091   1.115418
+       twoblack |   .0278832    .0350577      1.090573   1.115004
+     neastblack |   .2158796     .035071      3.549958   1.157371
+  ncentralblack |  -.0329685    .0861022      .7771917   2.478489
+     southblack |  -.0986991    .0317911      .6495278   1.180515
+        twohisp |  -.0453338    .0521733      .8828707   1.173946
+      neasthisp |   .1605162    .0201159      2.833195   1.103741
+   ncentralhisp |  -.0058882    .0095582      .9464528   1.098944
+      southhisp |  -.1349664    .0360555       .528558   1.242704
+-----------------------------------------------------------------
+
+. tebalance summarize
+(refitting the model using the generate() option)
+
+Covariate balance summary
+
+                         Raw      Matched
+-----------------------------------------
+Number of obs =       10,000        2,104
+Treated obs   =        1,052        1,052
+Control obs   =        8,948        1,052
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw     Matched           Raw    Matched
+----------------+------------------------------------------------
+          asian |  -.1447262   -.0166518      .6126742   .9370968
+       hispanic |  -.1177467    .0445768      .7645979   1.127554
+          black |   .0172169    .0716359      1.047239   1.221473
+        natamer |  -.0125168   -.0412746      .8645421   .6388088
+          urban |   1.097522           0      .7082836          1
+          neast |    .308096   -.0522258      1.414497   .9649244
+       ncentral |   .2083451     .014042      1.207835   1.009547
+          south |  -.1810693    .0388751       .828564   1.053446
+           sibs |  -.1095456   -.0123862      .9938813   .9542836
+        bedroom |   .1301627   -.0369953      .7823414   1.086064
+      twoparent |   .1740916    .0292194      .7448785   .9444834
+            ses |   .4156424     .054893      .8620954   .9979806
+           test |   .3679418    .0572344       .715418    1.04991
+          sessq |  -.0087175    .0228523      1.025914   1.151463
+         testsq |   -.155125    .0538604      .7545605   1.253205
+        sestest |  -.0610559    .0439501       .844091   1.115418
+       twoblack |   .0278832    .0350577      1.090573   1.115004
+     neastblack |   .2158796     .035071      3.549958   1.157371
+  ncentralblack |  -.0329685    .0861022      .7771917   2.478489
+     southblack |  -.0986991    .0317911      .6495278   1.180515
+        twohisp |  -.0453338    .0521733      .8828707   1.173946
+      neasthisp |   .1605162    .0201159      2.833195   1.103741
+   ncentralhisp |  -.0058882    .0095582      .9464528   1.098944
+      southhisp |  -.1349664    .0360555       .528558   1.242704
+-----------------------------------------------------------------
+
+. tebalance density ses
+(refitting the model using the generate() option)
+
+. graph export graph/tmp5.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp5.pdf saved as PDF format
+
+. 
+. tebalance box ses
+(refitting the model using the generate() option)
+
+. graph export graph/tmp6.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp6.pdf saved as PDF format
+
+. 
+. tebalance density test
+(refitting the model using the generate() option)
+
+. graph export graph/tmp7.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp7.pdf saved as PDF format
+
+. 
+. tebalance box test
+(refitting the model using the generate() option)
+
+. graph export graph/tmp8.pdf, replace
+file /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/graph/tmp8.pdf saved as PDF format
+
+. 
+. 
+. teffects psmatch ($outcome) ($treatment $correct), ///
+>  nn(5) cal(`=.05*r(sd)') atet
+
+Treatment-effects estimation                   Number of obs      =     10,000
+Estimator      : propensity-score matching     Matches: requested =          5
+Outcome model  : matching                                     min =          5
+Treatment model: logit                                        max =          5
+------------------------------------------------------------------------------
+             |              AI robust
+           y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+ATET         |
+       treat |
+   (1 vs 0)  |       6.42       0.50    12.76    0.00         5.43        7.41
+------------------------------------------------------------------------------
+
+. tebalance summarize
+(refitting the model using the generate() option)
+
+Covariate balance summary
+
+                         Raw      Matched
+-----------------------------------------
+Number of obs =       10,000        2,104
+Treated obs   =        1,052        1,052
+Control obs   =        8,948        1,052
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw     Matched           Raw    Matched
+----------------+------------------------------------------------
+          asian |  -.1447262    -.007561      .6126742   .9706123
+       hispanic |  -.1177467    .0432655      .7645979   1.123394
+          black |   .0172169    .0434518      1.047239   1.124839
+        natamer |  -.0125168   -.0156055      .8645421   .8344513
+          urban |   1.097522    .0009609      .7082836   .9985141
+          neast |    .308096    .0154493      1.414497   1.011814
+       ncentral |   .2083451   -.0298776      1.207835   .9814105
+          south |  -.1810693    .0036163       .828564   1.004671
+           sibs |  -.1095456    .0147522      .9938813   1.006855
+        bedroom |   .1301627   -.0146171      .7823414   1.032399
+      twoparent |   .1740916    .0223878      .7448785   .9568964
+            ses |   .4156424    .0088645      .8620954   .9855688
+           test |   .3679418   -.0039864       .715418    .995863
+          sessq |  -.0087175   -.0045371      1.025914   .9049271
+         testsq |   -.155125   -.0043453      .7545605   1.112382
+        sestest |  -.0610559   -.0152835       .844091   .9396625
+       twoblack |   .0278832    .0243411      1.090573   1.077533
+     neastblack |   .2158796    .0414767      3.549958   1.190481
+  ncentralblack |  -.0329685    .0217907      .7771917   1.206652
+     southblack |  -.0986991    .0071929      .6495278    1.03682
+        twohisp |  -.0453338    .0594539      .8828707    1.20237
+      neasthisp |   .1605162    .0253021      2.833195   1.133284
+   ncentralhisp |  -.0058882    .0279796      .9464528   1.337865
+      southhisp |  -.1349664    .0187602       .528558   1.115909
+-----------------------------------------------------------------
+
+. 
+. 
+. 
+. *let's look at some of many variations
+. 
+. teffects nnmatch ($outcome $correct) ($treatment), atet
+
+Treatment-effects estimation                   Number of obs      =     10,000
+Estimator      : nearest-neighbor matching     Matches: requested =          1
+Outcome model  : matching                                     min =          1
+Distance metric: Mahalanobis                                  max =          1
+------------------------------------------------------------------------------
+             |              AI robust
+           y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+ATET         |
+       treat |
+   (1 vs 0)  |       6.59       0.60    11.07    0.00         5.42        7.76
+------------------------------------------------------------------------------
+
+. tebalance summarize
+(refitting the model using the generate() option)
+
+Covariate balance summary
+
+                         Raw      Matched
+-----------------------------------------
+Number of obs =       10,000        2,104
+Treated obs   =        1,052        1,052
+Control obs   =        8,948        1,052
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw     Matched           Raw    Matched
+----------------+------------------------------------------------
+          asian |  -.1447262    .0042502      .6126742   1.017161
+       hispanic |  -.1177467           0      .7645979          1
+          black |   .0172169           0      1.047239          1
+        natamer |  -.0125168           0      .8645421          1
+          urban |   1.097522    .0402384      .7082836   .9419606
+          neast |    .308096    .0020276      1.414497   1.001511
+       ncentral |   .2083451   -.0039999      1.207835   .9973771
+          south |  -.1810693    .0022592       .828564   1.002911
+           sibs |  -.1095456     .024915      .9938813   1.163684
+        bedroom |   .1301627   -.0112232      .7823414   1.024698
+      twoparent |   .1740916           0      .7448785          1
+            ses |   .4156424    .0431796      .8620954   1.090751
+           test |   .3679418    .0471821       .715418   1.068639
+          sessq |  -.0087175    .0707636      1.025914    1.21967
+         testsq |   -.155125    .0601694      .7545605   1.213279
+        sestest |  -.0610559    .0122018       .844091   1.187848
+       twoblack |   .0278832           0      1.090573          1
+     neastblack |   .2158796           0      3.549958          1
+  ncentralblack |  -.0329685           0      .7771917          1
+     southblack |  -.0986991           0      .6495278          1
+        twohisp |  -.0453338           0      .8828707          1
+      neasthisp |   .1605162           0      2.833195          1
+   ncentralhisp |  -.0058882           0      .9464528          1
+      southhisp |  -.1349664           0       .528558          1
+-----------------------------------------------------------------
+
+. 
+. teffects ipw ($outcome) ($treatment $correct), atet
+
+Iteration 0:   EE criterion =  2.570e-16  
+Iteration 1:   EE criterion =  6.517e-26  
+
+Treatment-effects estimation                    Number of obs     =     10,000
+Estimator      : inverse-probability weights
+Outcome model  : weighted mean
+Treatment model: logit
+-------------------------------------------------------------------------------
+              |               Robust
+            y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+ATET          |
+        treat |
+    (1 vs 0)  |       6.42       0.46    14.03    0.00         5.52        7.31
+--------------+----------------------------------------------------------------
+POmean        |
+        treat |
+           0  |     102.10       0.33   310.37    0.00       101.46      102.75
+-------------------------------------------------------------------------------
+
+. tebalance summarize
+
+Covariate balance summary
+
+                         Raw     Weighted
+-----------------------------------------
+Number of obs =       10,000     10,000.0
+Treated obs   =        1,052      4,991.4
+Control obs   =        8,948      5,008.6
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw    Weighted           Raw   Weighted
+----------------+------------------------------------------------
+          asian |  -.1447262     .001689      .6126742   1.006761
+       hispanic |  -.1177467    -.001614      .7645979   .9958708
+          black |   .0172169    .0080644      1.047239   1.021244
+        natamer |  -.0125168     -.00343      .8645421    .959643
+          urban |   1.097522   -.0018033      .7082836   1.002802
+          neast |    .308096   -.0017494      1.414497   .9987065
+       ncentral |   .2083451   -.0056142      1.207835   .9963325
+          south |  -.1810693    .0092217       .828564   1.012025
+           sibs |  -.1095456    .0102873      .9938813   1.009262
+        bedroom |   .1301627   -.0018971      .7823414   1.004093
+      twoparent |   .1740916    .0012093      .7448785   .9975739
+            ses |   .4156424   -.0084253      .8620954   .9895621
+           test |   .3679418   -.0038204       .715418   1.015842
+          sessq |  -.0087175   -.0100112      1.025914   .9481957
+         testsq |   -.155125    .0080901      .7545605   1.160968
+        sestest |  -.0610559   -.0007791       .844091   1.013167
+       twoblack |   .0278832   -.0015581      1.090573   .9953671
+     neastblack |   .2158796     .010128      3.549958   1.041679
+  ncentralblack |  -.0329685   -.0019408      .7771917   .9842865
+     southblack |  -.0986991    .0023602      .6495278   1.011847
+        twohisp |  -.0453338    .0002274      .8828707    1.00066
+      neasthisp |   .1605162    -.001991      2.833195   .9905851
+   ncentralhisp |  -.0058882    .0048188      .9464528   1.048081
+      southhisp |  -.1349664   -.0001625       .528558   .9990805
+-----------------------------------------------------------------
+
+. 
+. teffects ipwra ($outcome $correct) ($treatment $correct), atet
+
+Iteration 0:   EE criterion =  2.570e-16  
+Iteration 1:   EE criterion =  6.969e-26  
+
+Treatment-effects estimation                    Number of obs     =     10,000
+Estimator      : IPW regression adjustment
+Outcome model  : linear
+Treatment model: logit
+-------------------------------------------------------------------------------
+              |               Robust
+            y | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+ATET          |
+        treat |
+    (1 vs 0)  |       6.47       0.45    14.25    0.00         5.58        7.36
+--------------+----------------------------------------------------------------
+POmean        |
+        treat |
+           0  |     102.05       0.32   317.53    0.00       101.42      102.68
+-------------------------------------------------------------------------------
+
+. tebalance summarize
+
+Covariate balance summary
+
+                         Raw     Weighted
+-----------------------------------------
+Number of obs =       10,000     10,000.0
+Treated obs   =        1,052      4,991.4
+Control obs   =        8,948      5,008.6
+-----------------------------------------
+
+-----------------------------------------------------------------
+                |Standardized differences          Variance ratio
+                |        Raw    Weighted           Raw   Weighted
+----------------+------------------------------------------------
+          asian |  -.1447262     .001689      .6126742   1.006761
+       hispanic |  -.1177467    -.001614      .7645979   .9958708
+          black |   .0172169    .0080644      1.047239   1.021244
+        natamer |  -.0125168     -.00343      .8645421    .959643
+          urban |   1.097522   -.0018033      .7082836   1.002802
+          neast |    .308096   -.0017494      1.414497   .9987065
+       ncentral |   .2083451   -.0056142      1.207835   .9963325
+          south |  -.1810693    .0092217       .828564   1.012025
+           sibs |  -.1095456    .0102873      .9938813   1.009262
+        bedroom |   .1301627   -.0018971      .7823414   1.004093
+      twoparent |   .1740916    .0012093      .7448785   .9975739
+            ses |   .4156424   -.0084253      .8620954   .9895621
+           test |   .3679418   -.0038204       .715418   1.015842
+          sessq |  -.0087175   -.0100112      1.025914   .9481957
+         testsq |   -.155125    .0080901      .7545605   1.160968
+        sestest |  -.0610559   -.0007791       .844091   1.013167
+       twoblack |   .0278832   -.0015581      1.090573   .9953671
+     neastblack |   .2158796     .010128      3.549958   1.041679
+  ncentralblack |  -.0329685   -.0019408      .7771917   .9842865
+     southblack |  -.0986991    .0023602      .6495278   1.011847
+        twohisp |  -.0453338    .0002274      .8828707    1.00066
+      neasthisp |   .1605162    -.001991      2.833195   .9905851
+   ncentralhisp |  -.0058882    .0048188      .9464528   1.048081
+      southhisp |  -.1349664   -.0001625       .528558   .9990805
+-----------------------------------------------------------------
+
+. 
+. 
+end of do-file
+
+. 
+.         /* 
+> 
+>         To continue, psmatch2 must be installed.  
+> 
+>         This is the package:
+> 
+>                 package name:  psmatch2.pkg
+>                                 from:  http://fmwww.bc.edu/RePEc/bocode/p/
+> 
+>         The ssc install command below will install (or update or do nothing 
+>         if up-to-date).
+> 
+>         */
+. 
+. ssc install psmatch2
+checking psmatch2 consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. 
+. do psmatch2_estimators_02.do
+
+. *******************************************************************************
+. *** matching etimators (psmatch2 routines)
+. *******************************************************************************
+. 
+. /* kernel matching (deafult kernel=epanechnikov) */
+. 
+. psmatch2 $treatment $short, logit kernel out($outcome)
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(13)   = 1577.52
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2574.8438                            Pseudo R2     =  0.2345
+
+------------------------------------------------------------------------------
+       treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+       asian |      -0.54       0.16    -3.44    0.00        -0.85       -0.23
+    hispanic |      -0.16       0.12    -1.28    0.20        -0.40        0.08
+       black |      -0.25       0.12    -2.04    0.04        -0.49       -0.01
+     natamer |       0.20       0.46     0.44    0.66        -0.69        1.09
+       urban |       2.62       0.09    29.64    0.00         2.44        2.79
+       neast |       1.83       0.13    14.39    0.00         1.58        2.08
+    ncentral |       1.47       0.13    11.69    0.00         1.22        1.72
+       south |       0.45       0.13     3.54    0.00         0.20        0.70
+        sibs |      -0.03       0.02    -1.28    0.20        -0.07        0.01
+     bedroom |       0.12       0.11     1.11    0.27        -0.09        0.32
+   twoparent |       0.31       0.10     3.12    0.00         0.12        0.51
+         ses |       0.58       0.05    12.19    0.00         0.49        0.67
+       sessq |      -0.11       0.03    -3.85    0.00        -0.17       -0.06
+       _cons |      -4.90       0.19   -26.04    0.00        -5.27       -4.53
+------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784   100.954325   7.56745889   .487722934    15.52
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     8,948 |     8,948 
+   Treated |     1,052 |     1,052 
+-----------+-----------+----------
+     Total |    10,000 |    10,000 
+
+. pstest $short _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323   .05529     -0.8 |  -0.21  0.835 |     .
+hispanic                | .10551    .1071     -0.5 |  -0.12  0.906 |     .
+black                   | .10456   .10045      1.4 |   0.31  0.756 |     .
+natamer                 | .00665   .00695     -0.4 |  -0.08  0.934 |     .
+urban                   | .80608   .78382      5.1 |   1.26  0.206 |     .
+neast                   | .32605   .30906      3.9 |   0.84  0.403 |     .
+ncentral                | .34316   .34795     -1.1 |  -0.23  0.817 |     .
+south                   | .23004   .23461     -1.0 |  -0.25  0.804 |     .
+sibs                    | 2.2633   2.2799     -0.9 |  -0.21  0.834 |  1.01
+bedroom                 | .86597   .86102      1.4 |   0.33  0.741 |     .
+twoparent               | .85456   .84902      1.5 |   0.36  0.721 |     .
+ses                     | .35594     .319      3.8 |   0.92  0.360 |  0.99
+sessq                   | .97988   .96085      1.3 |   0.30  0.761 |  1.01
+_pscore                 | .27809   .27191      4.1 |   0.78  0.434 |  0.97
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.004     12.59    0.559      1.9       1.3      15.3    0.55       0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. psmatch2 $treatment $correct, logit kernel out($outcome)
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784    101.93952   6.58226422   .499639159    13.17
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     8,948 |     8,948 
+   Treated |     1,052 |     1,052 
+-----------+-----------+----------
+     Total |    10,000 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323   .05507     -0.7 |  -0.19  0.853 |     .
+hispanic                | .10551   .10436      0.4 |   0.09  0.931 |     .
+black                   | .10456   .09205      4.1 |   0.96  0.335 |     .
+natamer                 | .00665   .00728     -0.7 |  -0.17  0.863 |     .
+urban                   | .80608   .78342      5.2 |   1.29  0.198 |     .
+neast                   | .32605   .31304      3.0 |   0.64  0.523 |     .
+ncentral                | .34316   .35092     -1.7 |  -0.37  0.708 |     .
+south                   | .23004   .23104     -0.2 |  -0.05  0.956 |     .
+sibs                    | 2.2633   2.2834     -1.1 |  -0.25  0.800 |  1.00
+bedroom                 | .86597   .86131      1.3 |   0.31  0.755 |     .
+twoparent               | .85456   .84854      1.6 |   0.39  0.698 |     .
+ses                     | .35594   .32281      3.4 |   0.82  0.414 |  0.98
+test                    | .30373   .27425      3.1 |   0.78  0.435 |  0.97
+sessq                   | .97988    .9762      0.3 |   0.06  0.954 |  0.98
+testsq                  | .82973   .83693     -0.5 |  -0.14  0.890 |  1.10
+sestest                 | .39196   .39118      0.1 |   0.02  0.986 |  0.98
+twoblack                |  .0846   .07619      3.1 |   0.71  0.479 |     .
+neastblack              | .05323   .04237      6.0 |   1.17  0.243 |     .
+ncentralblack           | .01426   .01385      0.3 |   0.08  0.936 |     .
+southblack              | .03612   .03407      1.0 |   0.26  0.798 |     .
+twohisp                 |  .0884   .08483      1.2 |   0.29  0.771 |     .
+neasthisp               | .03897    .0372      1.1 |   0.21  0.832 |     .
+ncentralhisp            | .01046   .01015      0.3 |   0.07  0.944 |     .
+southhisp               | .02852    .0282      0.2 |   0.04  0.965 |     .
+_pscore                 | .29789   .29179      3.8 |   0.71  0.475 |  0.97
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.005     15.92    0.917      1.8       1.1      17.2    0.50       0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. /* kernel matching (kernel=gaussian) */
+. 
+. psmatch2 $treatment $short, logit kernel k(normal) out($outcome)
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(13)   = 1577.52
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2574.8438                            Pseudo R2     =  0.2345
+
+------------------------------------------------------------------------------
+       treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+       asian |      -0.54       0.16    -3.44    0.00        -0.85       -0.23
+    hispanic |      -0.16       0.12    -1.28    0.20        -0.40        0.08
+       black |      -0.25       0.12    -2.04    0.04        -0.49       -0.01
+     natamer |       0.20       0.46     0.44    0.66        -0.69        1.09
+       urban |       2.62       0.09    29.64    0.00         2.44        2.79
+       neast |       1.83       0.13    14.39    0.00         1.58        2.08
+    ncentral |       1.47       0.13    11.69    0.00         1.22        1.72
+       south |       0.45       0.13     3.54    0.00         0.20        0.70
+        sibs |      -0.03       0.02    -1.28    0.20        -0.07        0.01
+     bedroom |       0.12       0.11     1.11    0.27        -0.09        0.32
+   twoparent |       0.31       0.10     3.12    0.00         0.12        0.51
+         ses |       0.58       0.05    12.19    0.00         0.49        0.67
+       sessq |      -0.11       0.03    -3.85    0.00        -0.17       -0.06
+       _cons |      -4.90       0.19   -26.04    0.00        -5.27       -4.53
+------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784    100.82516   7.69662376   .477169253    16.13
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     8,948 |     8,948 
+   Treated |     1,052 |     1,052 
+-----------+-----------+----------
+     Total |    10,000 |    10,000 
+
+. pstest $short _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323   .05955     -2.5 |  -0.63  0.530 |     .
+hispanic                | .10551   .11067     -1.6 |  -0.38  0.703 |     .
+black                   | .10456   .10049      1.3 |   0.31  0.758 |     .
+natamer                 | .00665   .00738     -0.9 |  -0.20  0.842 |     .
+urban                   | .80608   .73027     17.5 |   4.14  0.000 |     .
+neast                   | .32605   .29358      7.5 |   1.61  0.107 |     .
+ncentral                | .34316   .34717     -0.9 |  -0.19  0.846 |     .
+south                   | .23004   .23576     -1.3 |  -0.31  0.756 |     .
+sibs                    | 2.2633   2.3061     -2.3 |  -0.54  0.590 |  1.00
+bedroom                 | .86597   .85582      2.8 |   0.67  0.501 |     .
+twoparent               | .85456   .83998      3.8 |   0.93  0.353 |     .
+ses                     | .35594   .26564      9.4 |   2.23  0.026 |  0.98
+sessq                   | .97988   .94557      2.4 |   0.55  0.584 |  1.01
+_pscore                 | .27809   .25345     16.4 |   3.09  0.002 |  0.93
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.018     53.41    0.000      5.0       2.4      31.3*    0.36*     0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. psmatch2 $treatment $correct, logit kernel k(normal) out($outcome)
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784     101.6978   6.82398431   .489620992    13.94
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     8,948 |     8,948 
+   Treated |     1,052 |     1,052 
+-----------+-----------+----------
+     Total |    10,000 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323   .05887     -2.2 |  -0.56  0.574 |     .
+hispanic                | .10551   .10713     -0.5 |  -0.12  0.904 |     .
+black                   | .10456   .08938      5.0 |   1.18  0.240 |     .
+natamer                 | .00665   .00756     -1.1 |  -0.25  0.805 |     .
+urban                   | .80608   .73603     16.1 |   3.84  0.000 |     .
+neast                   | .32605    .2992      6.2 |   1.33  0.184 |     .
+ncentral                | .34316   .34471     -0.3 |  -0.07  0.940 |     .
+south                   | .23004   .23614     -1.4 |  -0.33  0.741 |     .
+sibs                    | 2.2633   2.3137     -2.8 |  -0.63  0.526 |  0.99
+bedroom                 | .86597   .85515      3.0 |   0.72  0.474 |     .
+twoparent               | .85456   .84041      3.7 |   0.90  0.367 |     .
+ses                     | .35594   .27236      8.7 |   2.05  0.040 |  0.95
+test                    | .30373   .23287      7.5 |   1.85  0.065 |  0.91
+sessq                   | .97988    .9683      0.8 |   0.18  0.854 |  0.98
+testsq                  | .82973   .86273     -2.5 |  -0.63  0.532 |  1.03
+sestest                 | .39196   .39447     -0.2 |  -0.06  0.955 |  0.95
+twoblack                |  .0846    .0732      4.2 |   0.97  0.332 |     .
+neastblack              | .05323    .0378      8.6 |   1.70  0.090 |     .
+ncentralblack           | .01426   .01373      0.4 |   0.10  0.917 |     .
+southblack              | .03612   .03497      0.5 |   0.14  0.887 |     .
+twohisp                 |  .0884   .08482      1.2 |   0.29  0.771 |     .
+neasthisp               | .03897   .03446      2.8 |   0.55  0.582 |     .
+ncentralhisp            | .01046   .01023      0.2 |   0.05  0.959 |     .
+southhisp               | .02852   .03028     -0.9 |  -0.24  0.811 |     .
+_pscore                 | .29789   .27384     15.0 |   2.78  0.005 |  0.93
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.021     62.31    0.000      3.8       2.5      33.4*    0.29*     0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. /* estimate logit for pscore to determine caliper size */
+. 
+. *** logit for pscore
+. logit $treatment $correct
+
+Iteration 0:   log likelihood = -3363.6057  
+Iteration 1:   log likelihood = -2712.6407  
+Iteration 2:   log likelihood = -2511.6891  
+Iteration 3:   log likelihood = -2503.3473  
+Iteration 4:   log likelihood = -2503.3258  
+Iteration 5:   log likelihood = -2503.3258  
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+
+. predict estpscore
+(option pr assumed; Pr(treat))
+
+. sum estpscore
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   estpscore |     10,000       .1052    .1424207   .0000159   .7432245
+
+. scalar sdpsc=r(sd)
+
+. display sdpsc
+.14242069
+
+. scalar setcal=.05*sdpsc
+
+. display setcal
+.00712103
+
+. 
+. 
+. /* nearest neighbor one-to-one matching -- no caliper, no replace */
+. 
+. capture drop _*
+
+. psmatch2 $treatment $correct, logit neighbor(1) noreplacement ///
+>  out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784   101.495664    7.0261197   .397018124    17.70
+                        ATU | 93.4220378   108.521784   15.0997462            .        .
+                        ATE |                           11.0629329            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |     7,896      1,052 |     8,948 
+   Treated |         0      1,052 |     1,052 
+-----------+----------------------+----------
+     Total |     7,896      2,104 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323        0     20.7 |   0.41  0.682 |     .
+hispanic                | .10551        0     32.0 |   0.59  0.552 |     .
+black                   | .10456   .33333    -75.6 |  -1.29  0.198 |     .
+natamer                 | .00665        0      7.9 |   0.14  0.887 |     .
+urban                   | .80608        0    185.6 |   3.53  0.000 |     .
+neast                   | .32605        0     75.3 |   1.20  0.229 |     .
+ncentral                | .34316        0     75.6 |   1.25  0.211 |     .
+south                   | .23004   .66667    -98.7 |  -1.79  0.073 |     .
+sibs                    | 2.2633   3.6667    -77.0 |  -1.33  0.182 |  2.48*
+bedroom                 | .86597        1    -36.8 |  -0.68  0.496 |     .
+twoparent               | .85456   .66667     49.2 |   0.92  0.358 |     .
+ses                     | .35594  -.79155    119.5 |   2.15  0.032 |  3.65*
+test                    | .30373  -.90622    128.6 |   2.44  0.015 |  1.23*
+sessq                   | .97988    .7824     13.8 |   0.24  0.813 |  2.67*
+testsq                  | .82973   1.2198    -29.7 |  -0.55  0.580 |  1.33*
+sestest                 | .39196   .80163    -39.0 |  -0.71  0.481 |  1.16*
+twoblack                |  .0846   .33333    -91.3 |  -1.54  0.124 |     .
+neastblack              | .05323        0     29.6 |   0.41  0.682 |     .
+ncentralblack           | .01426        0     11.2 |   0.21  0.835 |     .
+southblack              | .03612   .33333   -141.3 |  -2.73  0.006 |     .
+twohisp                 |  .0884        0     30.1 |   0.54  0.590 |     .
+neasthisp               | .03897        0     24.5 |   0.35  0.728 |     .
+ncentralhisp            | .01046        0     10.1 |   0.18  0.859 |     .
+southhisp               | .02852        0     14.2 |   0.30  0.767 |     .
+_pscore                 | .29789   .00475    183.2 |   2.61  0.009 |8659.93*
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+1.000     19.91        .     64.0      39.0     339.4*    1.27    100
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. summ _pdif, detail
+
+      psmatch2: abs(pscore - pscore[nearest neighbor])
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     5.54e-07       6.84e-09
+ 5%     4.06e-06       1.22e-07
+10%     .0000124       1.55e-07       Obs               2,104
+25%     .0001396       1.61e-07       Sum of wgt.       2,104
+
+50%     .0389518                      Mean           .1549901
+                        Largest       Std. dev.      .1984836
+75%     .2838939       .6813717
+90%     .4984458       .7136268       Variance       .0393958
+95%       .56444       .7187747       Skewness       1.049084
+99%      .636474       .7365491       Kurtosis       2.719625
+
+. 
+. /*
+> 
+> codebook _n1 if d==1
+> tab _nn if d==1
+> sum _* if d==1
+> codebook _n1 if d==0
+> tab _nn if d==0
+> sum _* if d==0
+> */
+. 
+. /* nearest neighbor one-to-one matching -- no caliper, with replace */
+. 
+. drop _*
+
+. psmatch2 $treatment $correct, logit neighbor(1) out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784   101.354053   7.16773051   .674563032    10.63
+                        ATU |  99.816306   105.604013   5.78770684            .        .
+                        ATE |                           5.93288533            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     8,948 |     8,948 
+   Treated |     1,052 |     1,052 
+-----------+-----------+----------
+     Total |    10,000 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323   .05703     -1.5 |  -0.38  0.703 |     .
+hispanic                | .10551   .09221      4.0 |   1.02  0.307 |     .
+black                   | .10456   .08365      6.9 |   1.64  0.101 |     .
+natamer                 | .00665   .01046     -4.5 |  -0.95  0.344 |     .
+urban                   | .80608   .80608      0.0 |  -0.00  1.000 |     .
+neast                   | .32605   .35076     -5.7 |  -1.20  0.231 |     .
+ncentral                | .34316    .3365      1.5 |   0.32  0.747 |     .
+south                   | .23004   .21388      3.7 |   0.89  0.373 |     .
+sibs                    | 2.2633   2.2861     -1.3 |  -0.28  0.776 |  0.95
+bedroom                 | .86597   .87833     -3.4 |  -0.85  0.396 |     .
+twoparent               | .85456   .84411      2.7 |   0.67  0.503 |     .
+ses                     | .35594   .30519      5.3 |   1.26  0.208 |  1.00
+test                    | .30373   .25515      5.2 |   1.31  0.189 |  1.05
+sessq                   | .97988   .94805      2.2 |   0.52  0.600 |  1.15*
+testsq                  | .82973   .76752      4.7 |   1.24  0.217 |  1.25*
+sestest                 | .39196   .34894      4.1 |   1.01  0.314 |  1.12
+twoblack                |  .0846    .0751      3.5 |   0.80  0.421 |     .
+neastblack              | .05323   .04563      4.2 |   0.80  0.421 |     .
+ncentralblack           | .01426    .0057      6.7 |   1.97  0.048 |     .
+southblack              | .03612   .03042      2.7 |   0.73  0.466 |     .
+twohisp                 |  .0884   .07414      4.9 |   1.20  0.232 |     .
+neasthisp               | .03897   .03517      2.4 |   0.46  0.645 |     .
+ncentralhisp            | .01046   .00951      0.9 |   0.22  0.827 |     .
+southhisp               | .02852   .02281      2.8 |   0.83  0.408 |     .
+_pscore                 | .29789   .29788      0.0 |   0.00  0.999 |  1.00
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.007     20.16    0.738      3.4       3.5      19.5    1.35      29
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. summ _pdif, detail
+
+      psmatch2: abs(pscore - pscore[nearest neighbor])
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     1.54e-06       6.84e-09
+ 5%     9.66e-06       6.84e-09
+10%     .0000201       1.22e-07       Obs              10,000
+25%     .0000655       1.22e-07       Sum of wgt.      10,000
+
+50%     .0001722                      Mean           .0002878
+                        Largest       Std. dev.      .0003944
+75%     .0003741       .0031464
+90%     .0006733       .0043059       Variance       1.56e-07
+95%     .0009824       .0043358       Skewness       13.50051
+99%     .0016528       .0195586       Kurtosis       578.7153
+
+. 
+. /*
+> codebook _n1 if d==1
+> tab _nn if d==1
+> sum _* if d==1
+> codebook _n1 if d==0
+> tab _nn if d==0
+> sum _* if d==0
+> */
+. 
+. /* nearest neighbor one-to-one matching -- with caliper, no replace */
+. 
+. quietly sum estpscore
+
+. psmatch2 $treatment $correct, logit neighbor(1) noreplacement ///
+>  cal(`=.05*r(sd)') out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.444912   101.644049   6.80086288   .501412539    13.56
+                        ATU | 101.723811   108.484522   6.76071061            .        .
+                        ATE |                           6.78069609            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |     7,947      1,001 |     8,948 
+   Treated |        60        992 |     1,052 
+-----------+----------------------+----------
+     Total |     8,007      1,993 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05645    .0383      7.0 |   1.48  0.139 |     .
+hispanic                | .11089   .07234     11.7 |   2.31  0.021 |     .
+black                   |  .0998   .06809     10.5 |   1.98  0.047 |     .
+natamer                 | .00706   .00851     -1.7 |  -0.30  0.764 |     .
+urban                   | .79435   .96383    -39.0 |  -8.66  0.000 |     .
+neast                   | .31149   .38936    -18.0 |  -2.95  0.003 |     .
+ncentral                |  .3377   .41915    -17.9 |  -3.03  0.002 |     .
+south                   | .24395   .15957     19.1 |   3.67  0.000 |     .
+sibs                    | 2.2792   2.3149     -2.0 |  -0.35  0.727 |  1.02
+bedroom                 | .86089   .87447     -3.7 |  -0.71  0.478 |     .
+twoparent               | .84879   .86383     -3.9 |  -0.76  0.448 |     .
+ses                     | .31171    .4486    -14.3 |  -2.72  0.007 |  1.12
+test                    | .28439   .36815     -8.9 |  -1.77  0.076 |  1.21*
+sessq                   | .93229   .94401     -0.8 |  -0.15  0.883 |  0.96
+testsq                  | .83281   .75858      5.7 |   1.12  0.262 |  1.32*
+sestest                 | .37084   .36472      0.6 |   0.11  0.913 |  1.00
+twoblack                | .08165   .05532      9.7 |   1.81  0.071 |     .
+neastblack              | .04536   .04894     -2.0 |  -0.30  0.762 |     .
+ncentralblack           | .01512   .00638      6.9 |   1.42  0.157 |     .
+southblack              | .03831   .01277     12.1 |   2.67  0.008 |     .
+twohisp                 | .09274    .0617     10.6 |   2.01  0.044 |     .
+neasthisp               | .04032   .05106     -6.7 |  -0.94  0.349 |     .
+ncentralhisp            | .01109   .00426      6.6 |   1.30  0.194 |     .
+southhisp               | .03024   .00638     11.9 |   2.87  0.004 |     .
+_pscore                 | .28002   .41418    -83.8 | -13.69  0.000 |  1.52*
+------------------------------------------------------------------------------
+* if variance ratio outside [0.88; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.114    208.93    0.000     12.6       8.9      83.7*    3.11*    43
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. summ _pdif, detail
+
+      psmatch2: abs(pscore - pscore[nearest neighbor])
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     4.33e-07       6.84e-09
+ 5%     3.66e-06       1.22e-07
+10%     .0000115       1.55e-07       Obs               1,993
+25%     .0000993       1.61e-07       Sum of wgt.       1,993
+
+50%     .0033764                      Mean           .0034616
+                        Largest       Std. dev.      .0030829
+75%     .0069181       .0071208
+90%     .0071021       .0071209       Variance       9.50e-06
+95%     .0071138       .0071209       Skewness       .0364551
+99%     .0071199       .0071209       Kurtosis       1.180873
+
+. 
+. /* codebook _n1 if d==1
+> tab _nn if d==1
+> sum _* if d==1
+> codebook _n1 if d==0
+> tab _nn if d==0
+> sum _* if d==0
+> */
+. 
+. /* nearest neighbor one-to-one matching -- with caliper, with replace */
+. 
+. quietly sum estpscore
+
+. psmatch2 $treatment $correct, logit neighbor(1) cal(`=.05*r(sd)') ///
+>  out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT |  108.51058   101.357204   7.15337631   .674747732    10.60
+                        ATU |  99.816306   105.604013   5.78770684            .        .
+                        ATE |                           5.93125305            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0      8,948 |     8,948 
+   Treated |         1      1,051 |     1,052 
+-----------+----------------------+----------
+     Total |         1      9,999 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05328   .05709     -1.5 |  -0.38  0.703 |     .
+hispanic                | .10561   .09229      4.0 |   1.02  0.307 |     .
+black                   | .10371   .08278      6.9 |   1.65  0.099 |     .
+natamer                 | .00666   .01047     -4.5 |  -0.95  0.344 |     .
+urban                   |  .8059    .8059      0.0 |   0.00  1.000 |     .
+neast                   |  .3254   .35014     -5.7 |  -1.20  0.231 |     .
+ncentral                | .34348   .33682      1.5 |   0.32  0.747 |     .
+south                   | .23026   .21408      3.7 |   0.89  0.373 |     .
+sibs                    | 2.2626   2.2873     -1.4 |  -0.31  0.758 |  0.95
+bedroom                 | .86584   .87821     -3.4 |  -0.85  0.396 |     .
+twoparent               | .85442   .84396      2.7 |   0.67  0.503 |     .
+ses                     | .35489   .30463      5.2 |   1.25  0.213 |  1.00
+test                    | .30364   .25486      5.2 |   1.32  0.188 |  1.05
+sessq                   | .97877   .94819      2.1 |   0.50  0.615 |  1.15*
+testsq                  | .83036   .76795      4.8 |   1.24  0.216 |  1.25*
+sestest                 | .39177    .3488      4.1 |   1.01  0.315 |  1.12
+twoblack                | .08373   .07422      3.5 |   0.81  0.419 |     .
+neastblack              | .05233   .04472      4.2 |   0.81  0.417 |     .
+ncentralblack           | .01427   .00571      6.8 |   1.97  0.048 |     .
+southblack              | .03616   .03045      2.7 |   0.73  0.466 |     .
+twohisp                 | .08849   .07422      4.9 |   1.20  0.232 |     .
+neasthisp               | .03901    .0352      2.4 |   0.46  0.645 |     .
+ncentralhisp            | .01047   .00951      0.9 |   0.22  0.827 |     .
+southhisp               | .02854   .02284      2.9 |   0.83  0.408 |     .
+_pscore                 | .29747   .29747     -0.0 |  -0.00  1.000 |  1.00
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.007     20.15    0.739      3.4       3.5      19.5    1.35      29
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. summ _pdif, detail
+
+      psmatch2: abs(pscore - pscore[nearest neighbor])
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     1.53e-06       6.84e-09
+ 5%     9.64e-06       6.84e-09
+10%     .0000201       1.22e-07       Obs               9,999
+25%     .0000655       1.22e-07       Sum of wgt.       9,999
+
+50%     .0001722                      Mean           .0002858
+                        Largest       Std. dev.      .0003441
+75%      .000374       .0028818
+90%     .0006732       .0031464       Variance       1.18e-07
+95%     .0009814       .0043059       Skewness       2.778044
+99%     .0016514       .0043358       Kurtosis       14.99125
+
+. 
+. /*
+> codebook _n1 if d==1
+> tab _nn if d==1
+> sum _* if d==1
+> codebook _n1 if d==0
+> tab _nn if d==0
+> sum _* if d==0
+> */
+. 
+. /* nearest neighbor five-to-one matching -- no caliper, with replace */
+. 
+. psmatch2 $treatment $correct, logit neighbor(5) out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT | 108.521784   102.102671   6.41911301   .535453411    11.99
+                        ATU |  99.816306    105.09269   5.27638417            .        .
+                        ATE |                           5.39659924            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+           | psmatch2:
+ psmatch2: |   Common
+ Treatment |  support
+assignment | On suppor |     Total
+-----------+-----------+----------
+ Untreated |     8,948 |     8,948 
+   Treated |     1,052 |     1,052 
+-----------+-----------+----------
+     Total |    10,000 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05323   .05494     -0.7 |  -0.17  0.862 |     .
+hispanic                | .10551   .09259      3.9 |   0.99  0.321 |     .
+black                   | .10456   .09163      4.3 |   1.00  0.319 |     .
+natamer                 | .00665   .00798     -1.6 |  -0.36  0.720 |     .
+urban                   | .80608    .8057      0.1 |   0.02  0.982 |     .
+neast                   | .32605   .31882      1.7 |   0.35  0.723 |     .
+ncentral                | .34316   .35741     -3.1 |  -0.69  0.493 |     .
+south                   | .23004   .22852      0.3 |   0.08  0.934 |     .
+sibs                    | 2.2633   2.2365      1.5 |   0.34  0.735 |  1.01
+bedroom                 | .86597   .87091     -1.4 |  -0.34  0.737 |     .
+twoparent               | .85456   .84658      2.1 |   0.51  0.608 |     .
+ses                     | .35594   .34772      0.9 |   0.20  0.839 |  0.99
+test                    | .30373   .30716     -0.4 |  -0.09  0.927 |  1.00
+sessq                   | .97988   .98658     -0.5 |  -0.10  0.917 |  0.90
+testsq                  | .82973   .83489     -0.4 |  -0.10  0.921 |  1.11
+sestest                 | .39196   .40757     -1.5 |  -0.35  0.726 |  0.94
+twoblack                |  .0846   .07795      2.4 |   0.56  0.577 |     .
+neastblack              | .05323    .0443      5.0 |   0.95  0.342 |     .
+ncentralblack           | .01426   .01179      1.9 |   0.50  0.617 |     .
+southblack              | .03612   .03479      0.6 |   0.16  0.869 |     .
+twohisp                 |  .0884   .07224      5.5 |   1.36  0.173 |     .
+neasthisp               | .03897   .03422      3.0 |   0.58  0.562 |     .
+ncentralhisp            | .01046   .00779      2.6 |   0.64  0.521 |     .
+southhisp               | .02852   .02548      1.5 |   0.43  0.667 |     .
+_pscore                 | .29789   .29776      0.1 |   0.02  0.988 |  1.00
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.002      6.04    1.000      1.9       1.5      10.7    1.19       0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. summ _pdif, detail
+
+      psmatch2: abs(pscore - pscore[nearest neighbor])
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     1.54e-06       6.84e-09
+ 5%     9.66e-06       6.84e-09
+10%     .0000201       1.22e-07       Obs              10,000
+25%     .0000655       1.22e-07       Sum of wgt.      10,000
+
+50%     .0001722                      Mean           .0002878
+                        Largest       Std. dev.      .0003944
+75%     .0003741       .0031464
+90%     .0006733       .0043059       Variance       1.56e-07
+95%     .0009824       .0043358       Skewness       13.50051
+99%     .0016528       .0195586       Kurtosis       578.7153
+
+. 
+. /*
+> codebook _n1 if d==1
+> codebook _n2 if d==1
+> codebook _n3 if d==1
+> codebook _n4 if d==1
+> codebook _n5 if d==1
+> distinct (_n1-_n5) if d==1, joint
+> tab _nn if d==1
+> sum _* if d==1
+> codebook _n1 if d==0
+> codebook _n2 if d==0
+> codebook _n3 if d==0
+> codebook _n4 if d==0
+> codebook _n5 if d==0
+> distinct (_n1-_n5) if d==0, joint
+> tab _nn if d==0
+> sum _* if d==0
+> */
+. 
+. /* nearest neighbor 5-to-one matching -- with caliper, with replace */
+. 
+. quietly sum estpscore
+
+. psmatch2 $treatment $correct, logit neighbor(5) cal(`=.05*r(sd)') ///
+>  out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT |  108.51058   102.135596   6.37498398   .536597723    11.88
+                        ATU |  99.816306   105.111991   5.29568479            .        .
+                        ATE |                           5.40913048            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0      8,948 |     8,948 
+   Treated |         1      1,051 |     1,052 
+-----------+----------------------+----------
+     Total |         1      9,999 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05328     .055     -0.7 |  -0.17  0.862 |     .
+hispanic                | .10561    .0922      4.1 |   1.03  0.303 |     .
+black                   | .10371   .09166      4.0 |   0.93  0.352 |     .
+natamer                 | .00666   .00799     -1.6 |  -0.36  0.720 |     .
+urban                   |  .8059   .80552      0.1 |   0.02  0.982 |     .
+neast                   |  .3254   .31752      1.8 |   0.39  0.699 |     .
+ncentral                | .34348    .3584     -3.3 |  -0.72  0.474 |     .
+south                   | .23026   .22873      0.3 |   0.08  0.934 |     .
+sibs                    | 2.2626   2.2388      1.3 |   0.30  0.764 |  1.01
+bedroom                 | .86584   .87073     -1.3 |  -0.33  0.741 |     .
+twoparent               | .85442   .84653      2.1 |   0.51  0.612 |     .
+ses                     | .35489   .34782      0.7 |   0.17  0.861 |  0.99
+test                    | .30364    .3073     -0.4 |  -0.10  0.922 |  1.00
+sessq                   | .97877   .98662     -0.5 |  -0.12  0.903 |  0.91
+testsq                  | .83036   .83616     -0.4 |  -0.11  0.911 |  1.11
+sestest                 | .39177   .40762     -1.5 |  -0.36  0.722 |  0.94
+twoblack                | .08373   .07805      2.1 |   0.48  0.633 |     .
+neastblack              | .05233   .04428      4.5 |   0.86  0.389 |     .
+ncentralblack           | .01427    .0118      2.0 |   0.50  0.617 |     .
+southblack              | .03616   .03482      0.6 |   0.16  0.869 |     .
+twohisp                 | .08849   .07184      5.7 |   1.41  0.160 |     .
+neasthisp               | .03901   .03378      3.3 |   0.64  0.522 |     .
+ncentralhisp            | .01047    .0078      2.6 |   0.64  0.521 |     .
+southhisp               | .02854    .0255      1.5 |   0.43  0.667 |     .
+_pscore                 | .29747   .29745      0.0 |   0.00  0.998 |  1.00
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.002      6.03    1.000      1.9       1.5      10.7    1.19       0
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. summ _pdif, detail
+
+      psmatch2: abs(pscore - pscore[nearest neighbor])
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     1.53e-06       6.84e-09
+ 5%     9.64e-06       6.84e-09
+10%     .0000201       1.22e-07       Obs               9,999
+25%     .0000655       1.22e-07       Sum of wgt.       9,999
+
+50%     .0001722                      Mean           .0002858
+                        Largest       Std. dev.      .0003441
+75%      .000374       .0028818
+90%     .0006732       .0031464       Variance       1.18e-07
+95%     .0009814       .0043059       Skewness       2.778044
+99%     .0016514       .0043358       Kurtosis       14.99125
+
+. 
+. /*
+> codebook _n1 if d==1
+> codebook _n2 if d==1
+> codebook _n3 if d==1
+> codebook _n4 if d==1
+> codebook _n5 if d==1
+> distinct (_n1-_n5) if d==1, joint
+> tab _nn if d==1
+> sum _* if d==1
+> codebook _n1 if d==0
+> codebook _n2 if d==0
+> codebook _n3 if d==0
+> codebook _n4 if d==0
+> codebook _n5 if d==0
+> distinct (_n1-_n5) if d==0, joint
+> tab _nn if d==0
+> sum _* if d==0
+> */
+. 
+. /* radius matching with caliper */
+.  
+. sum estpscore
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   estpscore |     10,000       .1052    .1424207   .0000159   .7432245
+
+. psmatch2 $treatment $correct, logit radius cal(`=.05*r(sd)') ///
+>  out($outcome) ate
+
+Logistic regression                                    Number of obs =  10,000
+                                                       LR chi2(24)   = 1720.56
+                                                       Prob > chi2   =  0.0000
+Log likelihood = -2503.3258                            Pseudo R2     =  0.2558
+
+-------------------------------------------------------------------------------
+        treat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+        asian |      -0.51       0.16    -3.25    0.00        -0.82       -0.20
+     hispanic |      -0.08       0.36    -0.22    0.82        -0.78        0.62
+        black |      -1.61       1.05    -1.54    0.12        -3.66        0.44
+      natamer |       0.26       0.46     0.57    0.57        -0.64        1.16
+        urban |       2.64       0.09    29.72    0.00         2.47        2.81
+        neast |       1.75       0.15    11.71    0.00         1.46        2.05
+     ncentral |       1.66       0.14    11.51    0.00         1.38        1.94
+        south |       0.61       0.15     4.01    0.00         0.31        0.91
+         sibs |      -0.03       0.02    -1.25    0.21        -0.07        0.01
+      bedroom |       0.13       0.11     1.20    0.23        -0.08        0.34
+    twoparent |       0.31       0.12     2.59    0.01         0.07        0.54
+          ses |       0.46       0.05     8.99    0.00         0.36        0.56
+         test |       0.39       0.05     7.79    0.00         0.29        0.49
+        sessq |      -0.06       0.03    -1.65    0.10        -0.13        0.01
+       testsq |      -0.21       0.04    -5.21    0.00        -0.28       -0.13
+      sestest |      -0.07       0.06    -1.17    0.24        -0.17        0.04
+     twoblack |      -0.23       0.32    -0.71    0.48        -0.86        0.40
+   neastblack |       2.40       1.04     2.30    0.02         0.36        4.43
+ncentralblack |       0.51       1.06     0.48    0.63        -1.56        2.59
+   southblack |       1.47       1.04     1.42    0.16        -0.56        3.51
+      twohisp |       0.37       0.31     1.20    0.23        -0.23        0.98
+    neasthisp |       0.18       0.32     0.57    0.57        -0.45        0.81
+ ncentralhisp |      -1.03       0.42    -2.43    0.01        -1.86       -0.20
+    southhisp |      -0.78       0.32    -2.46    0.01        -1.40       -0.16
+        _cons |      -4.89       0.21   -23.44    0.00        -5.29       -4.48
+-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+        Variable     Sample |    Treated     Controls   Difference         S.E.   T-stat
+----------------------------+-----------------------------------------------------------
+               y  Unmatched | 108.521784    99.816306   8.70547802   .436855485    19.93
+                        ATT |  108.51058   102.152732   6.35784758   .510661759    12.45
+                        ATU |  99.816306   105.514513   5.69820699            .        .
+                        ATE |                           5.76754215            .        .
+----------------------------+-----------------------------------------------------------
+Note: S.E. does not take into account that the propensity score is estimated.
+
+ psmatch2: |   psmatch2: Common
+ Treatment |        support
+assignment | Off suppo  On suppor |     Total
+-----------+----------------------+----------
+ Untreated |         0      8,948 |     8,948 
+   Treated |         1      1,051 |     1,052 
+-----------+----------------------+----------
+     Total |         1      9,999 |    10,000 
+
+. pstest $correct _pscore
+
+------------------------------------------------------------------------------
+                        |       Mean               |     t-test    |  V(T)/
+Variable                | Treated Control    %bias |    t    p>|t| |  V(C)
+------------------------+--------------------------+---------------+----------
+asian                   | .05328   .05183      0.6 |   0.15  0.882 |     .
+hispanic                | .10561   .09965      1.8 |   0.45  0.652 |     .
+black                   | .10371   .09244      3.7 |   0.87  0.385 |     .
+natamer                 | .00666   .00707     -0.5 |  -0.11  0.909 |     .
+urban                   |  .8059   .80018      1.3 |   0.33  0.742 |     .
+neast                   |  .3254   .31799      1.7 |   0.36  0.716 |     .
+ncentral                | .34348   .36021     -3.7 |  -0.80  0.422 |     .
+south                   | .23026   .22664      0.8 |   0.20  0.843 |     .
+sibs                    | 2.2626   2.2589      0.2 |   0.05  0.963 |  1.01
+bedroom                 | .86584   .86283      0.8 |   0.20  0.840 |     .
+twoparent               | .85442   .85485     -0.1 |  -0.03  0.978 |     .
+ses                     | .35489   .36104     -0.6 |  -0.15  0.879 |  0.99
+test                    | .30364    .3058     -0.2 |  -0.06  0.954 |  1.01
+sessq                   | .97877   .99193     -0.9 |  -0.21  0.837 |  0.93
+testsq                  | .83036   .82523      0.4 |   0.10  0.921 |  1.14*
+sestest                 | .39177   .39666     -0.5 |  -0.11  0.911 |  0.99
+twoblack                | .08373   .07711      2.4 |   0.56  0.577 |     .
+neastblack              | .05233   .04354      4.9 |   0.94  0.346 |     .
+ncentralblack           | .01427   .01415      0.1 |   0.02  0.981 |     .
+southblack              | .03616    .0337      1.2 |   0.31  0.759 |     .
+twohisp                 | .08849   .08114      2.5 |   0.60  0.546 |     .
+neasthisp               | .03901   .03517      2.4 |   0.47  0.642 |     .
+ncentralhisp            | .01047   .01032      0.1 |   0.03  0.973 |     .
+southhisp               | .02854   .02757      0.5 |   0.13  0.893 |     .
+_pscore                 | .29747   .29731      0.1 |   0.02  0.985 |  1.00
+------------------------------------------------------------------------------
+* if variance ratio outside [0.89; 1.13]
+
+----------------------------------------------------------------------
+Ps R2   LR chi2   p>chi2   MeanBias   MedBias      B       R     %Var 
+----------------------------------------------------------------------
+0.001      2.57    1.000      1.3       0.8       7.0    1.18      14
+----------------------------------------------------------------------
+* if B>25%, R outside [0.5; 2]
+
+. 
+. drop estpscore
+
+. 
+end of do-file
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/smorgan/Documents/GitHub/Morgan-Winship-2015/matching-demo-4.log
+  log type:  text
+ closed on:  22 Jul 2022, 11:34:42
+------------------------------------------------------------------------------------------------------------------------

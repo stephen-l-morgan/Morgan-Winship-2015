@@ -1,6 +1,14 @@
+********************************************************************************
+// Author:  Stephen L. Morgan
+// Date:    July 22, 2022
+// Note:    Matching demonstration 4
+********************************************************************************
 
-capture clear
+capture clear 
+capture program drop _all
 capture log close
+cls
+
 set cformat %4.2f
 set pformat %4.2f
 set sformat %4.2f
@@ -8,17 +16,23 @@ set more off
 
 log using matching-demo-4.log, replace
 
-
 *******************************************************************************
 *** load the simulated data set utilized for Table 5.6
 *******************************************************************************
 
+*** 10 simulated Stata datasets are in the repository.  The 9th dataset is the
+***    the one that genereates the results for Table 5.6.  Other datasets 
+***    can be used to evaluate the variability repoted in Table 5.7.
+
+	/* 
+	
+	Datasets can also be downloaded at the publisher website:
+
+		http://www.cambridge.org/download_file/857876 
+	
+	*/
+
 use mw_cath9.dta
-
-*** Datasets available here:  http://www.cambridge.org/download_file/857876
-
-*** alternative data set 
-*use mw_cath1.dta
 
 *******************************************************************************
 *** summary statistics for simulated data
@@ -37,10 +51,7 @@ label var fx1 "Treatment"
 line fx0 fx1 x, sort ytitle(Density)
 */
 
-
-
-table treat, c(mean y mean ses mean twoparent) format(%5.2f)
-table treat, c(mean test mean d) format(%5.2f) center
+mean y yt yc dshock d test ses twoparent, over(treat)
 
 *******************************************************************************
 *** set up macros for specifications
@@ -79,4 +90,23 @@ regress $outcome $treatment $correct
 *******************************************************************************
 
 do teffects_estimators_02.do
+
+	/* 
+
+	To continue, psmatch2 must be installed.  
+
+	This is the package:
+
+		package name:  psmatch2.pkg
+				from:  http://fmwww.bc.edu/RePEc/bocode/p/
+
+	The ssc install command below will install (or update or do nothing 
+	if up-to-date).
+
+	*/
+
+ssc install psmatch2
+
 do psmatch2_estimators_02.do
+
+log close

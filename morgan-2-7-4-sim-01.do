@@ -1,6 +1,6 @@
 ********************************************************************************
 // Author:  Stephen L. Morgan
-// Date:    August 21, 2020
+// Date:    July 22, 2022
 // Note:    Simulations for Section 2.7.4, focused on partial identification
 ********************************************************************************
 		 
@@ -24,7 +24,7 @@ log using morgan-2-7-4-sim-01.log, replace
 
 *** N for simulation (where we start with a large pseudo population)
 
-set obs 1000000 
+set obs 1000000
 
 *** Set seed for reproducibility (Steve's birthday. Don't forget it!)
 

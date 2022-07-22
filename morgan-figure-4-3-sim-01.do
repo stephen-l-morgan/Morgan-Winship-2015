@@ -1,6 +1,6 @@
 ********************************************************************************
 // Author:  Stephen L. Morgan
-// Date:    August 21, 2020
+// Date:    July 22, 2022
 // Note:    Demonstrate identification claims for Figure 4.3
 ********************************************************************************
 
@@ -21,6 +21,10 @@ log using morgan-figure-4-3-sim-01.log, replace
 *******************************************************************************
 
 set obs 1000000
+
+*** Set seed for reproducibility (Steve's birthday. Don't forget it!)
+
+set seed 73071
 
 *******************************************************************************
 *** generate data
@@ -67,7 +71,7 @@ graph export tmp432.pdf, replace
 restore
 */
 
-mean y0 ite y1 u v d y ytminus1, over(d)
+mean y0 ite y1 u v y ytminus1, over(d)
 corr y0 ite y1 u v d y ytminus1
 
 *******************************************************************************
